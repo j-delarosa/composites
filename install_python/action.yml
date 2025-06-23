@@ -1,0 +1,45 @@
+name: Parse TOML Python Version and Install it
+description: "This action reads the Python version from a pyproject.toml file and installs the specified version of Python using the setup-python action."
+outputs:
+  python-version:
+    description: "The Python version to install"
+    value: ${{ steps.get-python.outputs.python-version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Grab Repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Extract Python Version
+      id: get-python
+      shell: bash
+      run: |
+        # More robust Python version extraction
+        PYTHON_VERSION=$(grep -E '^python\s*=\s*"' pyproject.toml | \
+          sed -E 's/.*python\s*=\s*"([^"]+)".*/\1/' | \
+          sed -E 's/[~^<>=]+//g' | \
+          grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$')
+
+        # Validate extracted version
+        if [[ ! "$PYTHON_VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+          echo "Error: Invalid Python version format"
+          exit 1
+        fi
+
+        echo "Extracted Python version: $PYTHON_VERSION"
+        echo "python-version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+        echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ steps.get-python.outputs.python-version }}
+
+    - name: Verify Python Version
+      shell: bash
+      run: |
+        python --version
+        python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"

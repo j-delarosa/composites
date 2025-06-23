@@ -1,0 +1,42 @@
+name: Grab and set SSM parameter
+description: "This action grabs the SSM parameter from a given parameter name. Prior to using this, you will need to have already authenticated with AWS and set aws credentials within the pipeline run. This will only work with ssm parameters that are stored as strings."
+inputs:
+  SSM_PARAMETER_NAME:
+    description: "The SSM parameter name to use"
+    required: true
+  SET_NAME:
+    description: "The name to set the SSM Parameter Value to in the environment"
+    default: "NOT_SET"
+    required: false
+  MASK:
+    description: "Whether to mask the SSM Parameter Value in the logs"
+    required: false
+    default: "false"
+runs:
+  using: "composite"
+  steps:
+    - name: Grab SSM Parameter
+      id: get-ssm-parameter
+      shell: bash
+      run: |
+        # Get the SSM parameter value
+        SSM_PARAMETER_VALUE=$(aws ssm get-parameter --name ${{ inputs.SSM_PARAMETER_NAME }} --query 'Parameter.Value' --output text)
+        # write to output of the step
+        if [[ "${{ inputs.MASK }}" == "true" ]]; then
+          # Mask the SSM parameter value
+          echo "::add-mask::$SSM_PARAMETER_VALUE"
+        fi
+        # Set the SSM parameter value as an output
+        echo "::set-output name=SSM_PARAMETER_VALUE::$SSM_PARAMETER_VALUE"
+    - name: set SSM Parameter Value
+      shell: bash
+      run: |
+        # Set SSM value to environment variable
+        if ${{ inputs.SET_NAME }} == "NOT_SET"; then
+          SSM_NAME=$(basename ${{ inputs.SSM_PARAMETER_NAME }})
+          # Set the SSM parameter value as an environment variable
+          echo "${SSM_NAME}=${{ steps.get-ssm-parameter.outputs.SSM_PARAMETER_VALUE }}" >> $GITHUB_ENV
+        else
+          # Set the SSM parameter value as an environment variable
+          echo "${{ inputs.SET_NAME }}=${{ steps.get-ssm-parameter.outputs.SSM_PARAMETER_VALUE }}" >> $GITHUB_ENV
+        fi
