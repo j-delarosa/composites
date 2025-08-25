@@ -1,5 +1,10 @@
 name: Parse TOML Python Version and Install it
 description: "This action reads the Python version from a pyproject.toml file and installs the specified version of Python using the setup-python action."
+inputs:
+  ref_reference:
+    description: "The git reference to check out"
+    required: false
+    default: ${{ github.ref }}
 outputs:
   python-version:
     description: "The Python version to install"
@@ -11,7 +16,7 @@ runs:
     - name: Grab Repo
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.ref }}
+        ref: ${{ inputs.ref_reference }}
 
     - name: Extract Python Version
       id: get-python
