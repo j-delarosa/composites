@@ -43,6 +43,23 @@ runs:
       with:
         python-version: ${{ steps.get-python.outputs.python-version }}
 
+    - name: Cache Poetry installation
+      id: cache-poetry
+      uses: actions/cache@v3
+      with:
+        path: ~/.local
+        key: poetry-${{ runner.os }}-1.8.5
+
+    - name: Install Poetry
+      shell: bash
+      if: steps.cache-poetry.outputs.cache-hit != 'true'
+      run: |
+        curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.8.5 python3 -
+
+    - name: Add Poetry to PATH
+      shell: bash
+      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
     - name: Verify Python Version
       shell: bash
       run: |
