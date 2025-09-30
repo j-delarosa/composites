@@ -1,0 +1,34 @@
+name: Install Dependencies with Poetry and cache installation
+description: "Install Poetry dependencies with caching based on poetry.lock hash"
+
+inputs:
+  POETRY_PATH_INSTALLATION_LOCATION:
+    description: "The location where Poetry installs virtualenvs"
+    required: false
+    default: "~/.cache/pypoetry/virtualenvs"
+  POETRY_LOCK_FILE_PATH:
+    description: "The glob pattern for the poetry lock file"
+    required: false
+    default: "**/poetry.lock"
+
+outputs:
+  cache-hit:
+    description: "Whether the cache was hit (true/false)"
+    value: ${{ steps.cache-poetry.outputs.cache-hit }}
+  cache-key:
+    description: "The cache key used"
+    value: ${{ steps.cache-poetry.outputs.cache-primary-key }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cache Poetry virtualenvs
+      id: cache-poetry
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.POETRY_PATH_INSTALLATION_LOCATION }}
+        key: venv-${{ runner.os }}-${{ hashFiles(inputs.POETRY_LOCK_FILE_PATH) }}
+
+    - name: Install dependencies
+      shell: bash
+      run: poetry install --no-interaction
